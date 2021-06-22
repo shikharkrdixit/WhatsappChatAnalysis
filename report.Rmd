@@ -1,0 +1,172 @@
+---
+title: "Whatsapp Chat Analysis"
+author: "Shikhar"
+date: "22/06/2021"
+output: html_document
+---
+### Report of Whatsapp Chat Analysis.
+
+A Whatsapp Conversation can be a pretty personal and up-close representation of Relationship between two people.
+
+This analysis is of personal Whatsapp text messages as a part of NLP.
+
+The Dataset can be acquired by :-
+
+*" Select the inbox the chat which is to be Analyzed -> Click the 3 dots on the up-right corner -> More -> Export Chat -> Select if chat needs to be exported with or without media "*.
+
+After following the above steps, a **.txt** file will be acquired, which contains the Text Messages and which can be used for Analysis.
+
+
+So here we go...
+
+First things first lets setup the working-dir and call the libraries which will be helpful for the Analysis.
+
+
+
+```{r, warning=FALSE,message=FALSE}
+setwd("D:/R/WhatsappChatAnalysis")
+library(rwhatsapp)
+library(ggplot2)
+library(lubridate)
+library(tidytext)
+library(stopwords)
+library(tidyverse)
+library(tidymodels)
+library(syuzhet)
+library(RColorBrewer)
+```
+
+Packages used with their significance;
+
+|PackageName |Utilization|
+|-----|--------|
+|**rwhatsapp**|rwhatsapp provides some infrastructure to work with WhatsApp text data in R. It is a small and robust package.       |
+|**ggplot2**  |It is a popular package which is used for building Plots and effective Visualizations.      |
+|**lubridate**  |This package is used for *Lubricating* the use of Dates and Times in any Analysis.      |
+|**wordcloud**  |Used in building the **wordcloud**.      |
+|**tidytext**  |Makes the text mining process easier and consistent.      |
+|**stopwords**  |For inclusion of Stopwords.      |
+|**tidyverse**  |It is a collection of the few packages in R, so the packages get self-included on including tidyverse.      |
+|**tidymodels**  |Forms the basis of tidy machine learning.      |
+|**syuzhet**  |Extracts the sentiment and sentiment-derived plot arcs from text using a variety of sentiment dictionaries.      |
+
+
+Next thing that comes up is the Reading of the Whatsapp text (*.txt) file which was saved earlier,,
+
+```{r}
+chat <- rwa_read("D:/R/WhatsappChatAnalysis1/TextMessage.txt") %>%  filter(!is.na(author))
+colnames(chat)
+dim(chat)
+```
+
+
+Therefore, the dataset consists of 3550 - Rows with 7 - Columns whose names are shown as an output above.
+
+```{r}
+chat$Date <- as.Date(chat$time)
+chat$Time <- format(as.POSIXct(chat$time),format="%H:%M:%S")
+names(chat)[names(chat) == "time"] <- "DateAndTime"
+```
+
+
+What was done here was the seperation of the Date and Time each into different columns, which were already given in a Single Column kind of like "11-3-20, 09:46:42".
+
+
+Conventionally, every Dataset which we use for Analysis needs to be cleaned-up, which I will do later after it's Visualization and finding out the trends since cleaning it right now can tamper with different aspects of Visualization which I will be working upon.
+
+
+```{r}
+chat %>% 
+  count(author) %>%
+  ggplot(aes(x = reorder(author, n), y = n, fill=author)) +
+  geom_bar(stat = "identity") + xlab("Author") + ylab("Number Of Messages") +
+  coord_flip() + theme_bw() +
+  ggtitle("Relation between the messages sent by Each Person")
+```
+
+
+The plot above shows the comparison of the Messages sent by each person in the text, the legends mentioned in the plot tells the hue associated with each person.
+
+
+```{r}
+chat %>%
+  count(Date) %>%
+  ggplot(aes(x = Date, y = n)) + aes(fill=Date) +
+  geom_bar(stat = "identity") + theme_bw() +
+  ylab("Number Of Messages") + xlab("Months") + ggtitle("Chat Timeline")
+```
+
+
+This plot associates with the timeline of Messages with darker colours on the older time to the shade becoming lighter in the Recent time, on y axis we have number of messages plotted w.r.t. the recent timeline on x axis.
+
+
+```{r}
+to_remove <- c(stopwords(language = 'en'),"media","omitted","ref","2","yes","yess","stu","us","go",
+               "bro","one","well","get","just","idk","fuck","u","1","n","ok","int","can","3","cse")
+chatx <- chat%>% unnest_tokens(input = text,output = word) %>%
+  filter(!word %in% to_remove)
+
+chatx %>% count(author, word, sort = TRUE) %>%
+  group_by(author) %>%
+  top_n(n = 6, n) %>%
+  ggplot(aes(x = reorder_within(word, n, author), y = n, fill = author)) +
+  geom_col(show.legend = FALSE) +
+  ylab("words") +
+  xlab("frequency") +
+  coord_flip() +
+  facet_wrap(~author, ncol = 2, scales = "free_y") +
+  scale_x_reordered() +
+  ggtitle("Words oftenly used by each person")  
+```
+
+
+This plot shows of the frequent words used by each person most of the times in each conversation. We have two-plots for each person with the number of times the word has been used on the x-axis and the word being on the y-axis.
+
+
+```{r}
+wordcloud::wordcloud(chatx$word,max.words = 100,random.order = F,scale=c(2,1),colors = brewer.pal(9,"Dark2"))
+```
+
+
+This is a wordcloud of the words, thought not all words included here but the colour scheme of this wordcloud depends upon the frequency of the words that are used in the feeded Dataframe, with the most used word being in the middle of it, and the wordcloud expands on words with lesser and lesser frequencies being used as each the size of the wordcloud increases or on reading the words which are present on the outer surface.
+
+
+```{r}
+sentimentcheck <- get_nrc_sentiment(chat$text)
+head(sentimentcheck)
+```
+
+
+This is how the sentiment matrix looks like with each Sentiment being as each column, though this matrix will make more sense in further Analysis.
+
+Making the generated Sentiment's matrix more relevant and easier to understand...
+
+
+```{r}
+textdf <- cbind(chat$text,sentimentcheck)
+sentimentdf <- data.frame(colSums(textdf[,2:11]))
+names(sentimentdf) <- "SentimentCount"
+sentimentdf <- cbind("sentiment"=rownames(sentimentdf),sentimentdf)
+head(sentimentdf)
+```
+
+
+The numbers show the relevancy of each Sentiment w.r.t our feeded matrix. These numbers are easier to understand than the last ones though, still simplifying this further into a plot...
+
+
+```{r}
+x <-ggplot(sentimentdf) +
+  aes(x=sentiment,y=SentimentCount)  +
+  geom_bar(stat='identity') +  aes(fill=sentiment) + theme(axis.text.x = element_text(angle = 45, vjust = 0.9, hjust=1))
+x
+```
+
+
+Therefore, the plot makes it evident that the most used Emotions are **Positive** and following it is the **anticipation** and then **trust** and other emotions follow these.
+
+
+
+Please note that there are many other ways to do these processes, but, exploring new packages and new ways to do same things is a pretty fun task in itself.
+
+
+**Made with ❤️ by [Shikhar](https://www.linkedin.com/in/shikharkrdixit/) .**
