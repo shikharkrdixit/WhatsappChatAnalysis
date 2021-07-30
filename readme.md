@@ -2,9 +2,11 @@
 
 ***
 
-This is an Analysis of Whatsapp conversation of two people. It consists the messages sent be each person in the Conversation, the timeline of Conversation, Sentiment Analysis and etc. This is an NLP Associated project with an aim to get some meaningful insights from the conversation about the people.
+This is an Analysis of Whatsapp conversation of two people. It consists the messages sent by each person during several Conversations, the timeline of the Conversations, Sentiment Analysis and etc. This is an NLP Associated project with an aim to get some meaningful insights from the conversation about the people.
 
-Libraries used in this process :
+The full analysis can be found [here](https://rpubs.com/shikharkrdixit/whatsapptextanalysis) .
+
+Libraries used in the Process :
 
 |PackageName |Utilization|
 |-----|--------|
@@ -18,7 +20,6 @@ Libraries used in this process :
 |**tidymodels**  |Forms the basis of tidy machine learning.      |
 |**syuzhet**  |Extracts the sentiment and sentiment-derived plot arcs from text using a variety of sentiment dictionaries.      |
 
-The full analysis can be found [here](https://rpubs.com/shikharkrdixit/whatsapptextanalysis) .
 
 **Made with ❤️ by [Shikhar](https://www.linkedin.com/in/shikharkrdixit/) .** 
 
